@@ -17,7 +17,7 @@ FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
 
 # Copy the uberjar from builder
-COPY --from=builder /app/target/goldblum-*-standalone.jar ./app.jar
+COPY --from=builder /app/target/uberjar/goldblum-*-standalone.jar ./app.jar
 
 # Expose port
 EXPOSE 8080

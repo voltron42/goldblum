@@ -20,7 +20,12 @@
 
 ;; API Routes with Swagger documentation
 (def routes
-  [["/swagger.json"
+  [["/"
+    {:get {:no-doc true
+           :handler (fn [request]
+                      (response/redirect "/index.html"))}}]
+   
+   ["/swagger.json"
     {:get {:no-doc true
            :handler (swagger/create-swagger-handler)}}]
    

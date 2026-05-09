@@ -11,26 +11,18 @@ primary_region = "sjc"
 [[services]]
   internal_port = 8080
   processes = ["app"]
-  protocol = "tcp"
-  
-  [[services.ports]]
-    port = 80
-    handlers = ["http"]
-    force_https = true
-
-  [[services.ports]]
-    port = 443
-    handlers = ["tls", "http"]
+  protocol = "http"
 
   [services.concurrency]
     type = "connections"
     hard_limit = 1000
     soft_limit = 200
 
-  [[services.tcp_checks]]
+  [[services.http_checks]]
     grace_period = "10s"
     interval = "15s"
     timeout = "5s"
+    path = "/api/health"
 
 [[statics]]
   guest_path = "/public"

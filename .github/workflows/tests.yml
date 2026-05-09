@@ -9,14 +9,12 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    env:
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
     steps:
       - uses: actions/checkout@v5
 
       - name: Install Clojure CLI
-        uses: DeLaGuardo/setup-clojure@14.0
+        uses: DeLaGuardo/setup-clojure@13.6.0
         with:
           cli: latest
           lein: latest

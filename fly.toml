@@ -9,9 +9,6 @@ primary_region = 'sjc'
 [build]
   dockerfile = 'Dockerfile'
 
-[deploy]
-  release_command = "echo 'Deploy complete'"
-
 [env]
   PORT = '8080'
 

@@ -151,4 +151,4 @@
   [& args]
   (let [port (Integer/parseInt (or (System/getenv "PORT") "8080"))]
     (log/info (str "Starting Goldblum on http://0.0.0.0:" port))
-    (jetty/run-jetty handler {:port port :join? false})))
+    (jetty/run-jetty handler {:host "0.0.0.0" :port port :join? false})))

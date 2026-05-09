@@ -1,0 +1,37 @@
+/**
+ * Minimal custom CSS - Bootstrap 5 provides 95%+ of styling
+ * Only custom CSS for app-specific needs
+ */
+
+body {
+  background-color: #f8f9fa;
+  min-height: 100vh;
+}
+
+.navbar-brand {
+  font-weight: 700;
+  font-size: 1.5rem;
+  letter-spacing: 1px;
+}
+
+.response-box {
+  background-color: #f5f5f5;
+  border-left: 4px solid #007bff;
+  padding: 1rem;
+  border-radius: 4px;
+  font-family: monospace;
+  font-size: 0.875rem;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.response-box.error {
+  border-left-color: #dc3545;
+  background-color: #ffe5e5;
+}
+
+.response-box.success {
+  border-left-color: #28a745;
+  background-color: #e5f5e5;
+}
+

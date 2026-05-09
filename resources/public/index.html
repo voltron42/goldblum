@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Hello World deployment demo for fly.io">
+    <meta name="theme-color" content="#007bff">
+    
+    <title>Goldblum - Hello World Demo</title>
+    
+    <!-- Bootstrap 5 CSS from CDN -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" />
+    
+    <!-- Font Awesome Icons -->
+    <script src="https://kit.fontawesome.com/d550ee8263.js" crossorigin="anonymous"></script>
+    
+    <!-- React and React-DOM from CDN (UMD builds) -->
+    <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+    
+    <!-- Babel Standalone for JSX transpilation -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- Local styles (custom CSS, minimal) -->
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body class="bg-light">
+    <!-- React will render the app here -->
+    <div id="app-root"></div>
+
+    <!-- INLINED UTILITIES - All code in one place for zero-build setup -->
+    <script type="text/babel">
+        // ============ API SERVICE ============
+        const apiService = {
+            baseUrl: typeof process !== 'undefined' && process.env.REACT_APP_API_URL 
+                ? process.env.REACT_APP_API_URL 
+                : window.location.origin,
+            
+            async request(method, endpoint, body = null) {
+                const url = `${this.baseUrl}/api${endpoint}`;
+                const options = {
+                    method,
+                    headers: { 'Content-Type': 'application/json' },
+                    mode: 'cors',
+                    credentials: 'include'
+                };
+                if (body) options.body = JSON.stringify(body);
+                
+                try {
+                    const response = await fetch(url, options);
+                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                    return await response.json();
+                } catch (error) {
+                    throw error;
+                }
+            },
+            
+            get(endpoint) { return this.request('GET', endpoint); },
+            post(endpoint, body) { return this.request('POST', endpoint, body); },
+            put(endpoint, body) { return this.request('PUT', endpoint, body); },
+            delete(endpoint) { return this.request('DELETE', endpoint); },
+            
+            async health() {
+                try {
+                    const data = await this.get('/health');
+                    return data.status === 'ok';
+                } catch (e) {
+                    return false;
+                }
+            }
+        };
+
+        // ============ HELPERS ============
+        const helpers = {
+            formatDate: (date) => new Date(date).toLocaleDateString(),
+            formatTime: (date) => new Date(date).toLocaleTimeString(),
+            truncate: (str, len = 50) => str.length > len ? str.substring(0, len) + '...' : str
+        };
+
+        // ============ API TESTER COMPONENT ============
+        class ApiTester extends React.Component {
+            constructor(props) {
+                super(props);
+                this.state = {
+                    endpoint: '/hello',
+                    method: 'GET',
+                    requestBody: '',
+                    response: null,
+                    loading: false,
+                    error: null
+                };
+            }
+
+            handleExecute = async () => {
+                this.setState({ loading: true, error: null, response: null });
+                try {
+                    let result;
+                    switch (this.state.method) {
+                        case 'GET':
+                            result = await apiService.get(this.state.endpoint);
+                            break;
+                        case 'POST':
+                            result = await apiService.post(this.state.endpoint, JSON.parse(this.state.requestBody || '{}'));
+                            break;
+                        case 'PUT':
+                            result = await apiService.put(this.state.endpoint, JSON.parse(this.state.requestBody || '{}'));
+                            break;
+                        case 'DELETE':
+                            result = await apiService.delete(this.state.endpoint);
+                            break;
+                        default:
+                            result = null;
+                    }
+                    this.setState({ response: result, loading: false });
+                } catch (error) {
+                    this.setState({ error: error.message, loading: false });
+                }
+            };
+
+            render() {
+                const { endpoint, method, requestBody, response, loading, error } = this.state;
+                return (
+                    <div className="card mb-4">
+                        <div className="card-header bg-success text-white">
+                            <h5 className="mb-0"><i className="fas fa-flask me-2"></i>API Tester</h5>
+                        </div>
+                        <div className="card-body">
+                            <div className="row mb-3">
+                                <div className="col-md-6">
+                                    <label className="form-label">Endpoint</label>
+                                    <input 
+                                        type="text" 
+                                        className="form-control" 
+                                        value={endpoint}
+                                        onChange={(e) => this.setState({ endpoint: e.target.value })}
+                                        placeholder="/api/users"
+                                    />
+                                </div>
+                                <div className="col-md-6">
+                                    <label className="form-label">Method</label>
+                                    <select 
+                                        className="form-select"
+                                        value={method}
+                                        onChange={(e) => this.setState({ method: e.target.value })}
+                                    >
+                                        <option>GET</option>
+                                        <option>POST</option>
+                                        <option>PUT</option>
+                                        <option>DELETE</option>
+                                    </select>
+                                </div>
+                            </div>
+                            {['POST', 'PUT'].includes(method) && (
+                                <div className="mb-3">
+                                    <label className="form-label">Request Body (JSON)</label>
+                                    <textarea 
+                                        className="form-control" 
+                                        rows="3"
+                                        value={requestBody}
+                                        onChange={(e) => this.setState({ requestBody: e.target.value })}
+                                        placeholder="{}"
+                                    />
+                                </div>
+                            )}
+                            <button 
+                                className="btn btn-primary"
+                                onClick={this.handleExecute}
+                                disabled={loading}
+                            >
+                                {loading ? 'Loading...' : 'Execute'}
+                            </button>
+                            {response && (
+                                <div className="mt-3">
+                                    <h6>Response:</h6>
+                                    <pre className="bg-light p-2 rounded">{JSON.stringify(response, null, 2)}</pre>
+                                </div>
+                            )}
+                            {error && <div className="alert alert-danger mt-3">{error}</div>}
+                        </div>
+                    </div>
+                );
+            }
+        }
+
+        // ============ USERS LIST COMPONENT ============
+        class UsersList extends React.Component {
+            constructor(props) {
+                super(props);
+                this.state = {
+                    users: [],
+                    loading: true,
+                    error: null,
+                    showForm: false,
+                    newUser: { name: '', email: '' }
+                };
+            }
+
+            componentDidMount() {
+                this.loadUsers();
+            }
+
+            loadUsers = async () => {
+                try {
+                    const data = await apiService.get('/users');
+                    this.setState({ users: Array.isArray(data) ? data : [], loading: false });
+                } catch (error) {
+                    this.setState({ error: error.message, loading: false });
+                }
+            };
+
+            handleDelete = async (id) => {
+                try {
+                    await apiService.delete(`/users/${id}`);
+                    await this.loadUsers();
+                } catch (error) {
+                    this.setState({ error: error.message });
+                }
+            };
+
+            handleCreateUser = async () => {
+                const { newUser } = this.state;
+                try {
+                    await apiService.post('/users', newUser);
+                    this.setState({ newUser: { name: '', email: '' }, showForm: false });
+                    await this.loadUsers();
+                } catch (error) {
+                    this.setState({ error: error.message });
+                }
+            };
+
+            render() {
+                const { users, loading, error, showForm, newUser } = this.state;
+                if (loading) return <div className="card"><div className="card-body">Loading users...</div></div>;
+                
+                return (
+                    <div className="card mb-4">
+                        <div className="card-header bg-info text-white">
+                            <h5 className="mb-0"><i className="fas fa-users me-2"></i>Users</h5>
+                        </div>
+                        <div className="card-body">
+                            {error && <div className="alert alert-danger">{error}</div>}
+                            
+                            {users.length > 0 && (
+                                <ul className="list-group mb-3">
+                                    {users.map(user => (
+                                        <li key={user.id} className="list-group-item d-flex justify-content-between align-items-center">
+                                            <div>
+                                                <strong>{user.name}</strong>
+                                                <br/>
+                                                <small className="text-muted">{user.email}</small>
+                                                {user.id && <span className="badge bg-secondary ms-2">{user.id}</span>}
+                                            </div>
+                                            <button 
+                                                className="btn btn-sm btn-danger"
+                                                onClick={() => this.handleDelete(user.id)}
+                                            >
+                                                Delete
+                                            </button>
+                                        </li>
+                                    ))}
+                                </ul>
+                            )}
+                            
+                            {showForm ? (
+                                <div className="card border-secondary">
+                                    <div className="card-body">
+                                        <input 
+                                            type="text" 
+                                            className="form-control mb-2" 
+                                            placeholder="Name"
+                                            value={newUser.name}
+                                            onChange={(e) => this.setState({ newUser: { ...newUser, name: e.target.value } })}
+                                        />
+                                        <input 
+                                            type="email" 
+                                            className="form-control mb-2" 
+                                            placeholder="Email"
+                                            value={newUser.email}
+                                            onChange={(e) => this.setState({ newUser: { ...newUser, email: e.target.value } })}
+                                        />
+                                        <button className="btn btn-sm btn-success me-2" onClick={this.handleCreateUser}>
+                                            Create
+                                        </button>
+                                        <button className="btn btn-sm btn-secondary" onClick={() => this.setState({ showForm: false })}>
+                                            Cancel
+                                        </button>
+                                    </div>
+                                </div>
+                            ) : (
+                                <button className="btn btn-primary btn-sm" onClick={() => this.setState({ showForm: true })}>
+                                    Add User
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                );
+            }
+        }
+
+        // ============ POSTS LIST COMPONENT ============
+        class PostsList extends React.Component {
+            constructor(props) {
+                super(props);
+                this.state = {
+                    posts: [],
+                    loading: true,
+                    error: null,
+                    showForm: false,
+                    newPost: { title: '', body: '', userId: 1 }
+                };
+            }
+
+            componentDidMount() {
+                this.loadPosts();
+            }
+
+            loadPosts = async () => {
+                try {
+                    const data = await apiService.get('/posts');
+                    this.setState({ posts: Array.isArray(data) ? data : [], loading: false });
+                } catch (error) {
+                    this.setState({ error: error.message, loading: false });
+                }
+            };
+
+            handleDelete = async (id) => {
+                try {
+                    await apiService.delete(`/posts/${id}`);
+                    await this.loadPosts();
+                } catch (error) {
+                    this.setState({ error: error.message });
+                }
+            };
+
+            handleCreatePost = async () => {
+                const { newPost } = this.state;
+                try {
+                    await apiService.post('/posts', newPost);
+                    this.setState({ newPost: { title: '', body: '', userId: 1 }, showForm: false });
+                    await this.loadPosts();
+                } catch (error) {
+                    this.setState({ error: error.message });
+                }
+            };
+
+            render() {
+                const { posts, loading, error, showForm, newPost } = this.state;
+                if (loading) return <div className="card"><div className="card-body">Loading posts...</div></div>;
+                
+                return (
+                    <div className="card mb-4">
+                        <div className="card-header bg-warning text-dark">
+                            <h5 className="mb-0"><i className="fas fa-newspaper me-2"></i>Posts</h5>
+                        </div>
+                        <div className="card-body">
+                            {error && <div className="alert alert-danger">{error}</div>}
+                            
+                            {posts.length > 0 && (
+                                <ul className="list-group mb-3">
+                                    {posts.map(post => (
+                                        <li key={post.id} className="list-group-item">
+                                            <strong>{post.title}</strong>
+                                            <br/>
+                                            <p className="mb-2">{post.body}</p>
+                                            <small className="text-muted">User ID: {post.userId}</small>
+                                            {post.id && <span className="badge bg-secondary ms-2">{post.id}</span>}
+                                            <button 
+                                                className="btn btn-sm btn-danger float-end"
+                                                onClick={() => this.handleDelete(post.id)}
+                                            >
+                                                Delete
+                                            </button>
+                                        </li>
+                                    ))}
+                                </ul>
+                            )}
+                            
+                            {showForm ? (
+                                <div className="card border-secondary">
+                                    <div className="card-body">
+                                        <input 
+                                            type="text" 
+                                            className="form-control mb-2" 
+                                            placeholder="Title"
+                                            value={newPost.title}
+                                            onChange={(e) => this.setState({ newPost: { ...newPost, title: e.target.value } })}
+                                        />
+                                        <textarea 
+                                            className="form-control mb-2" 
+                                            placeholder="Body"
+                                            rows="3"
+                                            value={newPost.body}
+                                            onChange={(e) => this.setState({ newPost: { ...newPost, body: e.target.value } })}
+                                        />
+                                        <button className="btn btn-sm btn-success me-2" onClick={this.handleCreatePost}>
+                                            Create
+                                        </button>
+                                        <button className="btn btn-sm btn-secondary" onClick={() => this.setState({ showForm: false })}>
+                                            Cancel
+                                        </button>
+                                    </div>
+                                </div>
+                            ) : (
+                                <button className="btn btn-primary btn-sm" onClick={() => this.setState({ showForm: true })}>
+                                    Add Post
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                );
+            }
+        }
+
+        // ============ MAIN APP COMPONENT ============
+        class Main extends React.Component {
+            constructor(props) {
+                super(props);
+                this.state = {
+                    serverStatus: 'checking...',
+                    isOnline: false
+                };
+            }
+
+            componentDidMount() {
+                this.checkServerStatus();
+                this.statusInterval = setInterval(() => this.checkServerStatus(), 30000);
+            }
+
+            componentWillUnmount() {
+                if (this.statusInterval) clearInterval(this.statusInterval);
+            }
+
+            checkServerStatus = async () => {
+                const isOnline = await apiService.health();
+                this.setState({
+                    isOnline,
+                    serverStatus: isOnline ? 'Online' : 'Offline'
+                });
+            };
+
+            render() {
+                const { serverStatus, isOnline } = this.state;
+
+                return (
+                    <>
+                        {/* Navigation */}
+                        <nav className="navbar navbar-expand-lg navbar-dark bg-primary mb-4">
+                            <div className="container-fluid">
+                                <span className="navbar-brand">
+                                    <i className="fas fa-gem me-2"></i>Goldblum
+                                </span>
+                                <span className="ms-auto text-white">
+                                    <i className={`fas fa-circle me-2 ${isOnline ? 'text-success' : 'text-danger'}`}></i>
+                                    Server: <strong>{serverStatus}</strong>
+                                </span>
+                            </div>
+                        </nav>
+
+                        <main role="main" className="container">
+                            <div className="row mb-4">
+                                <div className="col-12">
+                                    <h1><i className="fas fa-rocket me-2"></i>Goldblum Application</h1>
+                                    <p className="text-muted">API testing and data management interface</p>
+                                </div>
+                            </div>
+
+                            <div className="row">
+                                <div className="col-lg-8">
+                                    <ApiTester />
+                                </div>
+                                <div className="col-lg-4">
+                                    <div role="alert" className={`alert ${isOnline ? 'alert-success' : 'alert-warning'}`}>
+                                        <strong>Status:</strong> {serverStatus}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="row">
+                                <div className="col-md-6">
+                                    <UsersList />
+                                </div>
+                                <div className="col-md-6">
+                                    <PostsList />
+                                </div>
+                            </div>
+                        </main>
+
+                        <footer role="contentinfo" className="bg-dark text-white mt-5 py-4">
+                            <div className="container text-center">
+                                <p className="mb-0">© Goldblum - Hello World Demo</p>
+                            </div>
+                        </footer>
+                    </>
+                );
+            }
+        }
+
+        // ============ RENDER APP ============
+        try {
+            ReactDOM.createRoot(document.getElementById("app-root")).render(<Main />);
+        } catch (error) {
+            console.error("Failed to initialize app:", error);
+            document.getElementById("app-root").innerHTML = 
+                '<div class="alert alert-danger mt-5">' +
+                '<h2>Error Loading Application</h2>' +
+                '<p>' + error.message + '</p>' +
+                '<pre>' + error.stack + '</pre>' +
+                '</div>';
+        }
+    </script>
+</body>
+</html>

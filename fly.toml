@@ -26,8 +26,15 @@ primary_region = 'sjc'
 [[services]]
   protocol = 'http'
   internal_port = 8080
-  ports = []
   processes = ['app']
+
+  [[services.ports]]
+    port = 80
+    handlers = ['http']
+
+  [[services.ports]]
+    port = 443
+    handlers = ['tls', 'http']
 
   [services.concurrency]
     type = 'connections'
